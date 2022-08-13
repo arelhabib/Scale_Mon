@@ -11,7 +11,8 @@ from module import (MainWin,
                     WorkerHelper, 
                     SerialRead, 
                     Image, 
-                    res_path)
+                    res_path,
+                    dbconnect)
 
 try:
     # Include in try/except block if you're also targeting Mac/Linux
@@ -131,7 +132,7 @@ class MainWindow(QtWidgets.QMainWindow):
         timer1 = QtCore.QTimer(self)
         timer1.timeout.connect(self.debugCon)
         timer1.timeout.connect(self.update_port)
-        timer1.start(10)
+        timer1.start(100)
     
         # Layout
         self.centralWidget = QtWidgets.QWidget()        
@@ -205,6 +206,7 @@ class MainWindow(QtWidgets.QMainWindow):
         sys.exit()
 
     def startCall(self):
+        """Start Monitoring if config is complete"""
         try:
             self._call.check()
             self._main.stopbutton.setEnabled(True)
@@ -221,6 +223,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._client.label_data.setText('Set port & rate first')
 
     def stopCall(self):
+        """Stop Monitoring"""
         try:
             self.thread.terminate()
             self.thread.join()
@@ -230,6 +233,7 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
     def checkCall(self):
+        """Check serial configuration"""
         try:
             self._call.check()
         except:
@@ -239,6 +243,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._main.statusBar.showMessage(msg, 5000)
  
     def dataOutput(self, data):
+        """Data Split"""
         #data 1 = weight, data 2 = rfid
         data1 = None
         data2 = None
@@ -268,6 +273,7 @@ class MainWindow(QtWidgets.QMainWindow):
         
     #row group belum bener
     def rowadd(self): # rowadd to nopol_manual1 to id_check if true back to rowadd
+        """bruto"""
         try:
             dbquery = QtSql.QSqlQuery()
             #id_check = self.id_check() #and id_check != self.id
@@ -293,6 +299,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._main.statusBar.showMessage('Start monitoring process first', 5000)
 
     def rowupdate(self):
+        """tara+netto"""
         try:
             print('try')
             dbquery = QtSql.QSqlQuery()
@@ -341,9 +348,9 @@ class MainWindow(QtWidgets.QMainWindow):
         dbquery = QtSql.QSqlQuery()
         column = "id"
         val = self.data2 #id ktp
-        if self.data2 is None:
-            column = "nopol"
-            val = self.nopol #nopol
+        #if self.data2 is None:
+        #    column = "nopol"
+        #    val = self.nopol #nopol
         
         #print('val=', val)        
         command = """SELECT "id", "nopol" from "trucklist" WHERE """ + column + """ = ?"""
@@ -415,10 +422,10 @@ class MainWindow(QtWidgets.QMainWindow):
             print(self.nopol)
             self.rowupdate()
 
-    def rfidscan(self): # belum jadi
+    def rfidscan(self):
+        """Isi Data Otomatis, berdasar data yg diperoleh"""
         try:
             id_check = self.id_check()
-            #dbquery = QtSql.QSqlQuery()
             if self._truck.isVisible() and self.data2 is not None and self.data2 != '0':
                 print('id truck =', self.id_check())
                 if self.id_check() is None:
@@ -426,8 +433,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.nopol_ask()
                 else:
                     pass
-            if self._truck.isVisible() is not True and self.data2 is not None and self.data2 != '0':
-                #print(self.data2)
+            if self._truck.isVisible() is False and self.data2 is not None and self.data2 != '0':
                 if id_check != self.id:# is True:
                     self.id = id_check
                     if self.nopol_timbang():
@@ -437,16 +443,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     pass
             else:
-                #print('im doing else')
                 self.id = None
                 #self.gross = None
         except:
             pass
 
     def saveCall(self):
+        """save to .csv"""
         try:
             print(self.id)
-            filter = "XLS Spreadsheet Files (*.csv)"
+            filter = "CSV (Comma Separated Values) (*.csv)"
             name, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', '', filter)
             with open(name, 'w') as stream:
                 print("saving", name)
@@ -482,7 +488,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    if not WorkerHelper.dbconnect():
+    if not dbconnect():
         sys.exit(1)
     app.setWindowIcon(QtGui.QIcon(res_path('icon.ico')))
     win = MainWindow()
