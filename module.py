@@ -115,7 +115,7 @@ class SerialRead(threading.Thread, QtCore.QObject):
                 try:
                     #text = rawdata.decode('ASCII')
                     text = rawdata.rstrip().decode('utf-8')
-                    text = text.split(', ')
+                    #text = text.split(', ')
                     #print(text[0])
                     #print(text)
                 except:
@@ -132,6 +132,49 @@ class IPCam():
     def __init__(self):
         pass
 
+class DebugWin(QtWidgets.QWidget):
+    def __init__(self, parent=None):
+        QtWidgets.QWidget.__init__(self, parent)
+        self.setWindowTitle("Debug Data Window")
+        self.setFixedWidth(350)
+        self.setContentsMargins(3,3,3,3)
+        self.setWindowFlags(QtCore.Qt.Window)
+        height      = 30
+        multiplier  = 0.05
+
+        self.label = LabelData()
+        self.label.setMinimumHeight(30)
+        self.label.multiplier = 0.10
+
+        self.label_raw = QtWidgets.QLabel("Raw Data")
+        self.label_weight = QtWidgets.QLabel("Weight Data:")
+        self.label_rfid = QtWidgets.QLabel("RFID Data:")
+        self.raw = LabelData()
+        self.weight = LabelData()
+        self.rfid = LabelData()
+        
+        self.raw.setMinimumHeight(height)
+        self.raw.multiplier = multiplier
+        self.weight.setMinimumHeight(height)
+        self.weight.multiplier = multiplier
+        self.rfid.setMinimumHeight(height)
+        self.rfid.multiplier = multiplier
+
+        main = QtWidgets.QVBoxLayout()
+        hbox = QtWidgets.QHBoxLayout()
+        hbox2= QtWidgets.QHBoxLayout()
+        hbox3= QtWidgets.QHBoxLayout()
+        self.setLayout(main)
+
+        hbox.addWidget(self.label_raw, 25)
+        hbox.addWidget(self.raw, 75)
+        hbox2.addWidget(self.label_weight, 25)
+        hbox2.addWidget(self.weight, 75)
+        hbox3.addWidget(self.label_rfid, 25)
+        hbox3.addWidget(self.rfid, 75)
+        main.addLayout(hbox)
+        main.addLayout(hbox2)
+        main.addLayout(hbox3)
 
 class ClientWin(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -178,6 +221,7 @@ class TruckAdmin(QtWidgets.QWidget):
         self.addbutton = QtWidgets.QPushButton('Add truck')
         self.delbutton = QtWidgets.QPushButton('Delete truck')
         self.savebutton = QtWidgets.QPushButton('Save truck list')
+        self.msg = QtWidgets.QLabel('Tempelkan kartu rfid jika ingin melakukan registrasi')
 
         #Layout
         main = QtWidgets.QVBoxLayout()
@@ -187,6 +231,7 @@ class TruckAdmin(QtWidgets.QWidget):
         #hlayout.addWidget(self.addbutton)
         hlayout.addWidget(self.delbutton)
         hlayout.addStretch()
+        hlayout.addWidget(self.msg)
 
         main.addWidget(self.viewtruk)
         main.addLayout(hlayout)
@@ -202,6 +247,8 @@ class MainWin(QtWidgets.QWidget):
         self.label_clock = QtWidgets.QLabel()
         self.label_clock.setFont(QtGui.QFont('', 25))
         self.label_data = LabelData()
+        self.msg = QtWidgets.QLabel('Tempelkan kartu untuk menimbang')
+        self.msg.setFont(QtGui.QFont('Segoe UI', 8))
 
         #Statusbar
         self.statusBar = QtWidgets.QStatusBar()

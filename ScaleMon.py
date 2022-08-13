@@ -7,6 +7,7 @@ from PyQt5 import  (QtWinExtras,
 from module import (MainWin, 
                     TruckAdmin, 
                     ClientWin, 
+                    DebugWin,
                     WorkerHelper, 
                     SerialRead, 
                     Image, 
@@ -30,6 +31,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._client = ClientWin(self)
         self._truck = TruckAdmin(self)
         self._main = MainWin()
+        self._debug = DebugWin(self)
         self.id = ''
         self.gross = ''
 
@@ -54,12 +56,18 @@ class MainWindow(QtWidgets.QMainWindow):
         regAction.setStatusTip('Edit truck list')
         regAction.triggered.connect(self.truckCall)
 
+        debugAction = QtWidgets.QAction('&Debug Data', self)
+        debugAction.setShortcut('Ctrl+Alt+D')
+        debugAction.setStatusTip('See all incoming data')
+        debugAction.triggered.connect(self.debugCall)
+
         clearAction = QtWidgets.QAction('&Clear Data', self)
         clearAction.setStatusTip('Clear displayed data')
         clearAction.triggered.connect(self.clear)
 
         self.unitsAction = QtWidgets.QAction('&Add "Kg" Units', self, checkable=True)
         self.unitsAction.setStatusTip('Add "Kg" units in displayed data')
+
 
         # Menubar
         # Create menu bar and add action
@@ -69,13 +77,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         fileMenu = menuBar.addMenu('&File')
         fileMenu.addAction(saveAction)
-        fileMenu.addAction(openAction)
-        fileMenu.addAction(regAction)
         fileMenu.addAction(exitAction)
 
-        fileMenu = menuBar.addMenu('&Settings')
+        settingsMenu = menuBar.addMenu('&Settings')
         rateGroup = QtWidgets.QActionGroup(rateMenu)
-        fileMenu.addMenu(rateMenu)
+        settingsMenu.addMenu(rateMenu)
         rateGroup.setExclusive(True)
         rateGroup.triggered.connect(self._call.chooseRate)
         for rate in self._call.listRate():
@@ -84,7 +90,7 @@ class MainWindow(QtWidgets.QMainWindow):
             rateGroup.addAction(rateAct)
         
         self.portGroup = QtWidgets.QActionGroup(self.portMenu)
-        fileMenu.addMenu(self.portMenu)
+        settingsMenu.addMenu(self.portMenu)
         self.portGroup.setExclusive(True)
         self.portGroup.triggered.connect(self._call.choosePort)
 
@@ -92,9 +98,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.portMenu.addAction(PortNone)
         self.portGroup.addAction(PortNone)
 
-        fileMenu.addSeparator()
-        fileMenu.addAction(clearAction)
-        fileMenu.addAction(self.unitsAction)
+        settingsMenu.addSeparator()
+        settingsMenu.addAction(clearAction)
+        settingsMenu.addAction(self.unitsAction)
+
+        adminMenu = menuBar.addMenu('&Tools')
+        adminMenu.addAction(openAction)
+        adminMenu.addAction(regAction)
+        adminMenu.addAction(debugAction)
+
+
 
         #QSignal
         self._call.stat_msg.connect(self.msgbar)
@@ -112,9 +125,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self._truck.delbutton.clicked.connect(self.truckdel)
         
         self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.update_port)
         self.timer.timeout.connect(self.rfidscan)
         self.timer.start(1000)
+
+        timer1 = QtCore.QTimer(self)
+        timer1.timeout.connect(self.debugCon)
+        timer1.timeout.connect(self.update_port)
+        timer1.start(10)
     
         # Layout
         self.centralWidget = QtWidgets.QWidget()        
@@ -128,10 +145,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.leftTopSub = QtWidgets.QHBoxLayout()
         self.rightBottom = QtWidgets.QHBoxLayout()
 
-        self.rightBottom.addWidget(self._main.gross)
-        self.rightBottom.addWidget(self._main.tare)
-        self.rightBottom.addWidget(self._main.delbutton)
-        self.rightBottom.addWidget(self._main.savebutton)
+        #self.rightBottom.addWidget(self._main.gross)
+        #self.rightBottom.addWidget(self._main.tare)
+        self.rightBottom.addWidget(self._main.msg)
+        self.rightBottom.addStretch(20)
+        self.rightBottom.addWidget(self._main.delbutton, 10)
+        self.rightBottom.addWidget(self._main.savebutton, 10)
         
         self.right_layout.addWidget(self._main.labeldat)
         self.right_layout.addWidget(self._main.viewtimbang)
@@ -149,12 +168,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.leftTop.addLayout(self.leftTopSub)
         self.leftTop.addWidget(self._main.label_data)
 
-        self.left_layout.addLayout(self.leftTop)
+        self.left_layout.addLayout(self.leftTop, 75)
         #self.left_layout.addSpacing(2)
-        self.left_layout.addWidget(self.logo)
+        self.left_layout.addWidget(self.logo, 25)
 
-        self.main_layout.addLayout(self.left_layout)
-        self.main_layout.addLayout(self.right_layout)
+        self.main_layout.addLayout(self.left_layout, 45)
+        self.main_layout.addLayout(self.right_layout, 55)
 
 
     def openCall(self):
@@ -163,11 +182,24 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self._client.show()
 
+    def debugCall(self):
+        if self._debug.isVisible():
+            pass
+        else:
+            self._debug.show()
+            self.timer.stop()
+
     def truckCall(self):
         if self._truck.isVisible():
             pass
         else:
             self._truck.show()
+
+    def debugCon(self):
+        if self._debug.isVisible() is False and self.timer.isActive():
+            pass
+        else:
+            self.timer.start(1000)
 
     def exitCall(self):
         sys.exit()
@@ -207,8 +239,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self._main.statusBar.showMessage(msg, 5000)
  
     def dataOutput(self, data):
+        #data 1 = weight, data 2 = rfid
         data1 = None
         data2 = None
+        data = data.split(', ')
         if type(data) is list:
             try:
                 data1 = data[0]
@@ -221,15 +255,19 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             pass
         '''print('raw:', data)
-        print('data1: ', data1)
-        print('data2: ', data2)'''
+        print('berat: ', data1, 'rfid: ', data2)'''
         self.data1 = data1
         self.data2 = data2 # make false state when in filter list
+        
         self._client.label_data.setText(data1)
         self._main.label_data.setText(data1)
+        if self._debug.isVisible():
+            self._debug.raw.setText(str(data))
+            self._debug.weight.setText(data1)
+            self._debug.rfid.setText(data2)
         
     #row group belum bener
-    def rowadd(self): # rowadd to nopol_check to id_check if true back to rowadd
+    def rowadd(self): # rowadd to nopol_manual1 to id_check if true back to rowadd
         try:
             dbquery = QtSql.QSqlQuery()
             #id_check = self.id_check() #and id_check != self.id
@@ -247,7 +285,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     print(dbquery.executedQuery())
                     self.nopol = '' #self.nopol reset just complicated
                 elif self.id is None:
-                    self.nopol_check()
+                    self.nopol_manual1()
                     print('here')
                 else:
                     self._main.statusBar.showMessage('Data yang dimasukkan tidak cocok/tidak ada', 5000)
@@ -265,7 +303,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 #self.id = id_check
                 self.gross = get_gross
                 netto = float(self.gross) - float(self.data1)
-                #netto = round(netto, 2)
                 #command = "UPDATE hasil_timbang SET Tara = ?, Netto = ? WHERE Tara IS NULL AND Nopol IS " + id_check
                 dbquery.prepare("UPDATE hasil_timbang SET Tara = ?, Netto = ? WHERE Tara IS NULL AND Nopol = ?")
                 dbquery.addBindValue(self.data1)
@@ -274,6 +311,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 dbquery.exec()
                 self._main.timbang.select()
                 print(dbquery.executedQuery())
+            if get_gross is None:
+                self.nopol_manual2()
             else:
                 print('else')
         except:
@@ -290,7 +329,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def truckadd(self):
         #ask something
-        #self.nopol_check
+        #self.nopol_manual
         pass
 
     def truckdel(self):
@@ -305,8 +344,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.data2 is None:
             column = "nopol"
             val = self.nopol #nopol
-
-        #print('val=', val)
+        
+        #print('val=', val)        
         command = """SELECT "id", "nopol" from "trucklist" WHERE """ + column + """ = ?"""
         dbquery.prepare(command)
         dbquery.addBindValue(val)
@@ -316,6 +355,7 @@ class MainWindow(QtWidgets.QMainWindow):
             #result = [dbquery.value(0), dbquery.value(1)]
             result = dbquery.value(1) #nopol registered in db
             #print(dbquery.isValid())
+            #print('idcheck =', result)
             return result # return nopol string
         else:
             return None
@@ -335,6 +375,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return None
 
     def nopol_ask(self):
+        """registrasi truk"""
         self.timer.stop()
         print(self.data2)
         dbquery = QtSql.QSqlQuery()
@@ -345,7 +386,7 @@ class MainWindow(QtWidgets.QMainWindow):
             nama, dialog1 = QtWidgets.QInputDialog.getText(self, "Nama Supir", "Masukkan nama supir dibawah")
             if id != 0:
                 print("masuk = ", id)
-                if dialog and dialog1:
+                if dialog and dialog1 is not None:
                     dbquery.prepare(
                     """
                     INSERT INTO "trucklist"(id, Nopol, Nama) values(?, ?, ?)
@@ -357,16 +398,22 @@ class MainWindow(QtWidgets.QMainWindow):
                     self._truck.truk.select()
                     id = None
                     self.timer.start(1000)
+                else:
+                    self.timer.start(1000)
+                
 
-    def nopol_askmanual(self):
-        dbquery = QtSql.QSqlQuery()
-        pass
         
-    def nopol_check(self):
+    def nopol_manual1(self):
         self.nopol, dialog = QtWidgets.QInputDialog.getText(self, "Nopol Truk", "Masukkan plat nomor truk dibawah")
         if dialog:
             print(self.nopol)
             self.rowadd()
+
+    def nopol_manual2(self):
+        self.nopol, dialog = QtWidgets.QInputDialog.getText(self, "Nopol Truk", "Masukkan plat nomor truk dibawah")
+        if dialog:
+            print(self.nopol)
+            self.rowupdate()
 
     def rfidscan(self): # belum jadi
         try:
