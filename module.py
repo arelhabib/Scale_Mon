@@ -1,4 +1,4 @@
-import sys, os, threading, serial
+import os, threading, serial
 from serial.tools import list_ports
 from PyQt5 import  (QtWidgets, 
                     QtGui, 
@@ -8,50 +8,17 @@ from PyQt5 import  (QtWidgets,
 
 #Utils
 def res_path(relative_path):
-        """ Get absolute path to resource, works for dev and for PyInstaller """
-        try:
-            # PyInstaller creates a temp folder and stores path in _MEIPASS
-            base_path = sys._MEIPASS
-        except Exception:
-            base_path = os.path.abspath(".")
+            """ Get absolute path to resource, works for dev and for PyInstaller """
+            #try:
+            #    # PyInstaller creates a temp folder and stores path in _MEIPASS
+            #    base_path = sys._MEIPASS
+            #except Exception:  
+            #    base_path = os.path.abspath("./resource")
+            exe_path = os.path.dirname( os.path.realpath( __file__ ) )
 
-        return os.path.join(base_path, relative_path)
+            return os.path.join(exe_path, 'resource' , relative_path)
 
-def dbconnect():
-        con = QtSql.QSqlDatabase.addDatabase("QSQLITE")
-        con.setDatabaseName("database.db")
-        if not con.open():
-            QtWidgets.QMessageBox.critical(
-                None,
-                "Error!",
-                "Database Error: %s" % con.lastError().databaseText(),
-            )
-            return False
-        createTableQuery = QtSql.QSqlQuery()
-        createTableQuery.exec(
-            """
-            CREATE TABLE "hasil_timbang" (
-            "Nopol"	    TEXT NOT NULL,
-            "Tanggal"	TEXT NOT NULL,
-            "Bruto"	    INTEGER,
-            "Tara"	    INTEGER,
-            "Netto"	    INTEGER
-            )
-            """
-        )
-        createTableQuery.exec(
-            """
-            CREATE TABLE "trucklist"(
-            "id"	TEXT PRIMARY KEY,
-            "Nopol"	TEXT,
-            "Nama"  TEXT
-            )
-            """
-        )
-        # beware of not null
-        return True
-
-class WorkerHelper(QtCore.QObject):
+class Helper(QtCore.QObject):
     stat_msg = QtCore.pyqtSignal(object)
     def __init__(self):
         QtCore.QRunnable.__init__(self)
@@ -84,6 +51,39 @@ class WorkerHelper(QtCore.QObject):
         except:
             raise
 
+    def dbconnect():
+            con = QtSql.QSqlDatabase.addDatabase("QSQLITE")
+            con.setDatabaseName("database.db")
+            if not con.open():
+                QtWidgets.QMessageBox.critical(
+                    None,
+                    "Error!",
+                    "Database Error: %s" % con.lastError().databaseText(),
+                )
+                return False
+            createTableQuery = QtSql.QSqlQuery()
+            createTableQuery.exec(
+                """
+                CREATE TABLE "hasil_timbang" (
+                "Nopol"	    TEXT NOT NULL,
+                "Tanggal"	TEXT NOT NULL,
+                "Bruto"	    INTEGER,
+                "Tara"	    INTEGER,
+                "Netto"	    INTEGER
+                )
+                """
+            )
+            createTableQuery.exec(
+                """
+                CREATE TABLE "trucklist"(
+                "id"	TEXT PRIMARY KEY,
+                "Nopol"	TEXT,
+                "Nama"  TEXT
+                )
+                """
+            )
+            # beware of not null
+            return True
 
 
 # RAPIIN LAGI
