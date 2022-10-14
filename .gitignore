@@ -106,6 +106,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+*.bat
 .env
 .venv
 env/
@@ -131,3 +132,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# own exception
+pytest
+testfd
+*.db
+*.psd
+*.csv
+*.xlsx

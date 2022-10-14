@@ -8,9 +8,9 @@ from module import (MainWin,
                     TruckAdmin, 
                     ClientWin, 
                     DebugWin,
-                    WorkerHelper, 
+                    Helper, 
                     SerialRead, 
-                    Image, 
+                    Image,
                     res_path)
 
 try:
@@ -27,7 +27,7 @@ class MainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self)
         self.setMinimumSize(QtCore.QSize(800, 500))
         self.setWindowTitle("Scale Monitor")
-        self._call = WorkerHelper()
+        self._helper = Helper()
         self._client = ClientWin(self)
         self._truck = TruckAdmin(self)
         self._main = MainWin()
@@ -83,8 +83,8 @@ class MainWindow(QtWidgets.QMainWindow):
         rateGroup = QtWidgets.QActionGroup(rateMenu)
         settingsMenu.addMenu(rateMenu)
         rateGroup.setExclusive(True)
-        rateGroup.triggered.connect(self._call.chooseRate)
-        for rate in self._call.listRate():
+        rateGroup.triggered.connect(self._helper.chooseRate)
+        for rate in self._helper.listRate():
             rateAct = QtWidgets.QAction(rate, rateMenu, checkable=True)
             rateMenu.addAction(rateAct)
             rateGroup.addAction(rateAct)
@@ -92,7 +92,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.portGroup = QtWidgets.QActionGroup(self.portMenu)
         settingsMenu.addMenu(self.portMenu)
         self.portGroup.setExclusive(True)
-        self.portGroup.triggered.connect(self._call.choosePort)
+        self.portGroup.triggered.connect(self._helper.choosePort)
 
         PortNone = QtWidgets.QAction('No Serial Port Connected', self, checkable=False)
         self.portMenu.addAction(PortNone)
@@ -110,10 +110,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
         #QSignal
-        self._call.stat_msg.connect(self.msgbar)
+        self._helper.stat_msg.connect(self.msgbar)
 
         #Main Win
-        self.logo = Image(res_path('logo_new.png'))
+        self.logo = Image(res_path('logo_uny.png'))
         self._main.startbutton.clicked.connect(self.startCall)
         self._main.stopbutton.clicked.connect(self.stopCall)
         self._main.checkbutton.clicked.connect(self.checkCall)
@@ -123,15 +123,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._main.savebutton.clicked.connect(self.saveCall)
         self._truck.addbutton.clicked.connect(self.truckadd)
         self._truck.delbutton.clicked.connect(self.truckdel)
-        
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.rfidscan)
-        self.timer.start(1000)
-
-        timer1 = QtCore.QTimer(self)
-        timer1.timeout.connect(self.debugCon)
-        timer1.timeout.connect(self.update_port)
-        timer1.start(10)
     
         # Layout
         self.centralWidget = QtWidgets.QWidget()        
@@ -145,16 +136,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.leftTopSub = QtWidgets.QHBoxLayout()
         self.rightBottom = QtWidgets.QHBoxLayout()
 
-        #self.rightBottom.addWidget(self._main.gross)
-        #self.rightBottom.addWidget(self._main.tare)
         self.rightBottom.addWidget(self._main.msg)
         self.rightBottom.addStretch(20)
         self.rightBottom.addWidget(self._main.delbutton, 10)
-        self.rightBottom.addWidget(self._main.savebutton, 10)
-        
-        self.right_layout.addWidget(self._main.labeldat)
-        self.right_layout.addWidget(self._main.viewtimbang)
-        self.right_layout.addLayout(self.rightBottom)
+        self.rightBottom.addWidget(self._main.savebutton, 10)       
 
         self.leftTopSub.addWidget(self._main.labelmon)
         self.leftTopSub.addStretch()
@@ -168,12 +153,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.leftTop.addLayout(self.leftTopSub)
         self.leftTop.addWidget(self._main.label_data)
 
+        self.right_layout.addWidget(self._main.labeldat)
+        self.right_layout.addWidget(self._main.viewtimbang)
+        self.right_layout.addLayout(self.rightBottom)
         self.left_layout.addLayout(self.leftTop, 75)
-        #self.left_layout.addSpacing(2)
         self.left_layout.addWidget(self.logo, 25)
-
+        
         self.main_layout.addLayout(self.left_layout, 45)
         self.main_layout.addLayout(self.right_layout, 55)
+
+        #timer
+        self.timer = QtCore.QTimer(self)
+        self.timer.timeout.connect(self.rfidscan)
+        self.timer.start(1000)
+
+        timer1 = QtCore.QTimer(self)
+        timer1.timeout.connect(self.debugCon)
+        timer1.timeout.connect(self.update_port)
+        timer1.start(100)
 
 
     def openCall(self):
@@ -187,7 +184,7 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
         else:
             self._debug.show()
-            self.timer.stop()
+            
 
     def truckCall(self):
         if self._truck.isVisible():
@@ -196,17 +193,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self._truck.show()
 
     def debugCon(self):
-        if self._debug.isVisible() is False and self.timer.isActive():
-            pass
-        else:
-            self.timer.start(1000)
+        if self._debug.isVisible():
+            self.timer.stop()
+        elif self._debug.isVisible() is False:
+            if self._truck.isVisible():
+                pass
+            elif self.timer.isActive() is False: 
+                self.timer.start(1000)
 
     def exitCall(self):
         sys.exit()
 
     def startCall(self):
+        """Start Monitoring if config is complete"""
         try:
-            self._call.check()
+            self._helper.check()
             self._main.stopbutton.setEnabled(True)
             self._main.startbutton.setEnabled(False)
             self.thread = SerialRead()
@@ -221,6 +222,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._client.label_data.setText('Set port & rate first')
 
     def stopCall(self):
+        """Stop Monitoring"""
         try:
             self.thread.terminate()
             self.thread.join()
@@ -230,8 +232,9 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
     def checkCall(self):
+        """Check serial configuration"""
         try:
-            self._call.check()
+            self._helper.check()
         except:
             self._main.statusBar.showMessage('Port &/rate not selected', 5000)
         
@@ -239,9 +242,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._main.statusBar.showMessage(msg, 5000)
  
     def dataOutput(self, data):
+        """Data Split"""
         #data 1 = weight, data 2 = rfid
         data1 = None
         data2 = None
+        dataraw = str(data)
         data = data.split(', ')
         if type(data) is list:
             try:
@@ -254,7 +259,7 @@ class MainWindow(QtWidgets.QMainWindow):
             data1 = ' '.join(data1)
         else:
             pass
-        '''print('raw:', data)
+        '''print('raw:', dataraw)
         print('berat: ', data1, 'rfid: ', data2)'''
         self.data1 = data1
         self.data2 = data2 # make false state when in filter list
@@ -262,12 +267,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self._client.label_data.setText(data1)
         self._main.label_data.setText(data1)
         if self._debug.isVisible():
-            self._debug.raw.setText(str(data))
+            self._debug.raw.setText(dataraw)
             self._debug.weight.setText(data1)
             self._debug.rfid.setText(data2)
         
     #row group belum bener
     def rowadd(self): # rowadd to nopol_manual1 to id_check if true back to rowadd
+        """bruto"""
         try:
             dbquery = QtSql.QSqlQuery()
             #id_check = self.id_check() #and id_check != self.id
@@ -293,6 +299,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._main.statusBar.showMessage('Start monitoring process first', 5000)
 
     def rowupdate(self):
+        """tara+netto"""
         try:
             print('try')
             dbquery = QtSql.QSqlQuery()
@@ -341,9 +348,9 @@ class MainWindow(QtWidgets.QMainWindow):
         dbquery = QtSql.QSqlQuery()
         column = "id"
         val = self.data2 #id ktp
-        if self.data2 is None:
-            column = "nopol"
-            val = self.nopol #nopol
+        #if self.data2 is None:
+        #    column = "nopol"
+        #    val = self.nopol #nopol
         
         #print('val=', val)        
         command = """SELECT "id", "nopol" from "trucklist" WHERE """ + column + """ = ?"""
@@ -415,10 +422,10 @@ class MainWindow(QtWidgets.QMainWindow):
             print(self.nopol)
             self.rowupdate()
 
-    def rfidscan(self): # belum jadi
+    def rfidscan(self):
+        """Isi Data Otomatis, berdasar data yg diperoleh"""
         try:
             id_check = self.id_check()
-            #dbquery = QtSql.QSqlQuery()
             if self._truck.isVisible() and self.data2 is not None and self.data2 != '0':
                 print('id truck =', self.id_check())
                 if self.id_check() is None:
@@ -426,8 +433,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.nopol_ask()
                 else:
                     pass
-            if self._truck.isVisible() is not True and self.data2 is not None and self.data2 != '0':
-                #print(self.data2)
+            if self._truck.isVisible() is False and self.data2 is not None and self.data2 != '0':
                 if id_check != self.id:# is True:
                     self.id = id_check
                     if self.nopol_timbang():
@@ -437,17 +443,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     pass
             else:
-                #print('im doing else')
                 self.id = None
                 #self.gross = None
         except:
             pass
 
     def saveCall(self):
+        """save to .csv"""
         try:
-            print(self.id)
-            filter = "XLS Spreadsheet Files (*.csv)"
-            name, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', '', filter)
+            docpath = QtCore.QStandardPaths.writableLocation(1) #DocumentLocation
+            filter = "CSV (Comma Separated Values) (*.csv)"
+            name, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', docpath, filter)
             with open(name, 'w') as stream:
                 print("saving", name)
                 writer = csv.writer(stream, delimiter=";", lineterminator="\n")
@@ -468,11 +474,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._client.label_data.clear()
 
     def update_port(self):
-        find_ports = self._call.listPort()
-        if find_ports != self._call.portlist:
-            self._call.portlist = find_ports
+        find_ports = self._helper.listPort()
+        if find_ports != self._helper.portlist:
+            self._helper.portlist = find_ports
             self.portMenu.clear()
-            for port in self._call.portlist:
+            for port in self._helper.portlist:
                 portAct = QtWidgets.QAction(port, self.portMenu, checkable=True)
                 self.portMenu.addAction(portAct)
                 self.portGroup.addAction(portAct)
@@ -482,9 +488,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    if not WorkerHelper.dbconnect():
+    if not Helper.dbconnect():
         sys.exit(1)
-    app.setWindowIcon(QtGui.QIcon(res_path('icon.ico')))
+    app.setWindowIcon(QtGui.QIcon(res_path("icon.ico")))
     win = MainWindow()
     win.show()
     sys.exit( app.exec_() )

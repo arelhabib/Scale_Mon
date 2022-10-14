@@ -1,4 +1,4 @@
-import sys, os, threading, serial
+import os, threading, serial
 from serial.tools import list_ports
 from PyQt5 import  (QtWidgets, 
                     QtGui, 
@@ -8,17 +8,17 @@ from PyQt5 import  (QtWidgets,
 
 #Utils
 def res_path(relative_path):
-        """ Get absolute path to resource, works for dev and for PyInstaller """
-        try:
-            # PyInstaller creates a temp folder and stores path in _MEIPASS
-            base_path = sys._MEIPASS
-        except Exception:
-            base_path = os.path.abspath("resource/.")
+            """ Get absolute path to resource, works for dev and for PyInstaller """
+            #try:
+            #    # PyInstaller creates a temp folder and stores path in _MEIPASS
+            #    base_path = sys._MEIPASS
+            #except Exception:  
+            #    base_path = os.path.abspath("./resource")
+            exe_path = os.path.dirname( os.path.realpath( __file__ ) )
 
-        return os.path.join(base_path, relative_path)
+            return os.path.join(exe_path, 'resource' , relative_path)
 
-
-class WorkerHelper(QtCore.QObject):
+class Helper(QtCore.QObject):
     stat_msg = QtCore.pyqtSignal(object)
     def __init__(self):
         QtCore.QRunnable.__init__(self)
@@ -52,42 +52,43 @@ class WorkerHelper(QtCore.QObject):
             raise
 
     def dbconnect():
-        con = QtSql.QSqlDatabase.addDatabase("QSQLITE")
-        con.setDatabaseName("database.db")
-        if not con.open():
-            QtWidgets.QMessageBox.critical(
-                None,
-                "Error!",
-                "Database Error: %s" % con.lastError().databaseText(),
+            con = QtSql.QSqlDatabase.addDatabase("QSQLITE")
+            con.setDatabaseName("database.db")
+            if not con.open():
+                QtWidgets.QMessageBox.critical(
+                    None,
+                    "Error!",
+                    "Database Error: %s" % con.lastError().databaseText(),
+                )
+                return False
+            createTableQuery = QtSql.QSqlQuery()
+            createTableQuery.exec(
+                """
+                CREATE TABLE "hasil_timbang" (
+                "Nopol"	    TEXT NOT NULL,
+                "Tanggal"	TEXT NOT NULL,
+                "Bruto"	    INTEGER,
+                "Tara"	    INTEGER,
+                "Netto"	    INTEGER
+                )
+                """
             )
-            return False
-        createTableQuery = QtSql.QSqlQuery()
-        createTableQuery.exec(
-            """
-            CREATE TABLE "hasil_timbang" (
-            "Nopol"	    TEXT NOT NULL,
-            "Tanggal"	TEXT NOT NULL,
-            "Bruto"	    INTEGER,
-            "Tara"	    INTEGER,
-            "Netto"	    INTEGER
+            createTableQuery.exec(
+                """
+                CREATE TABLE "trucklist"(
+                "id"	TEXT PRIMARY KEY,
+                "Nopol"	TEXT,
+                "Nama"  TEXT
+                )
+                """
             )
-            """
-        )
-        createTableQuery.exec(
-            """
-            CREATE TABLE "trucklist"(
-            "id"	TEXT PRIMARY KEY,
-            "Nopol"	TEXT,
-            "Nama"  TEXT
-            )
-            """
-        )
-        # beware of not null
-        return True
+            # beware of not null
+            return True
 
 
 # RAPIIN LAGI
 class SerialRead(threading.Thread, QtCore.QObject):
+    """Get Data from Serial decode to utf-8"""
     data_ready = QtCore.pyqtSignal(object)
     ser_error = QtCore.pyqtSignal(object)
     def __init__(self):
@@ -115,12 +116,8 @@ class SerialRead(threading.Thread, QtCore.QObject):
                 try:
                     #text = rawdata.decode('ASCII')
                     text = rawdata.rstrip().decode('utf-8')
-                    #text = text.split(', ')
-                    #print(text[0])
-                    #print(text)
                 except:
                     text = rawdata.hex()
-                    #print(text)
                 self.data_ready.emit(text)
                 
         except Exception as e:
@@ -207,7 +204,7 @@ class TruckAdmin(QtWidgets.QWidget):
         self.setWindowFlags(QtCore.Qt.Window)
 
         #Table model
-        self.truk = QtSql.QSqlTableModel()
+        self.truk = QSqlTableTruck()
         self.truk.setTable("trucklist")
         self.truk.setEditStrategy(QtSql.QSqlTableModel.OnFieldChange)
         self.truk.select()
@@ -271,7 +268,7 @@ class MainWin(QtWidgets.QWidget):
         self.savebutton.setToolTip('Save Table to File')
 
         #Model View
-        self.timbang = QtSql.QSqlTableModel()
+        self.timbang = QSqlTableTimbang()
         self.timbang.setTable("hasil_timbang")
         self.timbang.setEditStrategy(QtSql.QSqlTableModel.OnFieldChange)
         '''self.timbang.setHeaderData(0, QtCore.Qt.Horizontal, "ID")
@@ -329,7 +326,22 @@ class LabelData(QtWidgets.QLabel):
         font.setPixelSize(self.width() * self.multiplier)
         self.setFont(font)
 
+# QtCore.Qt.ItemIsEnabled
+# QtCore.Qt.ItemIsSelectable
+# QtCore.Qt.ItemIsEditable
 class QSqlTableTimbang(QtSql.QSqlTableModel):
     def __init__(self):
         QtSql.QSqlTableModel.__init__(self)
-        
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+class QSqlTableTruck(QtSql.QSqlTableModel):
+    def __init__(self):
+        QtSql.QSqlTableModel.__init__(self)
+
+    def flags(self, index):
+        if(index.column() == 0):
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        else:    
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable
