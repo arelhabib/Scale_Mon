@@ -25,10 +25,10 @@ class AdminWin(QtWidgets.QWidget):
         hbox = QtWidgets.QHBoxLayout()
         self.setLayout(main)
 
+        hbox.addWidget(self.msg)
+        hbox.addStretch()
         #hlayout.addWidget(self.addbutton)
         hbox.addWidget(self.delButton)
-        hbox.addStretch()
-        hbox.addWidget(self.msg)
 
         main.addWidget(self.adminTable)
         main.addLayout(hbox)

@@ -10,28 +10,13 @@ class DebugWin(QtWidgets.QWidget):
         self.setFixedWidth(350)
         self.setContentsMargins(3,3,3,3)
         self.setWindowFlags(QtCore.Qt.WindowType.Window)
-        height      = 30
-        multiplier  = 0.05
-
-        # NOTE: somehow ga kepake
-        label = LabelData()
-        label.setMinimumHeight(30)
-        label.multiplier = 0.10
 
         rawTitle = QtWidgets.QLabel("Raw Data")
         weighTitle = QtWidgets.QLabel("Weight Data:")
         rfidTitle = QtWidgets.QLabel("RFID Data:")
-        self.displayRaw = LabelData()
-        self.displayWeight = LabelData()
-        self.displayRfid = LabelData()
-        
-        # NOTE: gimana caranya ga harus set satu satu
-        self.displayRaw.setMinimumHeight(height)
-        self.displayRaw.multiplier = multiplier
-        self.displayWeight.setMinimumHeight(height)
-        self.displayWeight.multiplier = multiplier
-        self.displayRfid.setMinimumHeight(height)
-        self.displayRfid.multiplier = multiplier
+        self.displayRaw = _LabelDebug()
+        self.displayWeight = _LabelDebug()
+        self.displayRfid = _LabelDebug()
 
         main = QtWidgets.QVBoxLayout()
         hbox1 = QtWidgets.QHBoxLayout()
@@ -48,3 +33,10 @@ class DebugWin(QtWidgets.QWidget):
         main.addLayout(hbox1)
         main.addLayout(hbox2)
         main.addLayout(hbox3)
+
+class _LabelDebug(LabelData):
+    def __init__(self):
+        super().__init__()
+
+        self.multiplier = 0.05
+        self.setMinimumHeight(30)

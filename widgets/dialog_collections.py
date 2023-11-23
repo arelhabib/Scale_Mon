@@ -1,18 +1,19 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 
 
 def showDbErrorMessage(err: str):
     QtWidgets.QMessageBox.critical(
-        None,
+        QtWidgets.QApplication.activeWindow(),
         "Error!",
         f"Database Error: {err}",
     )
 
 def inputDialog(title: str, description: str):
     return QtWidgets.QInputDialog.getText(
-        None, 
+        QtWidgets.QApplication.activeWindow(), 
         title, 
-        description
+        description,
+        flags= QtCore.Qt.WindowType.WindowCloseButtonHint
     )
 
 def saveDialog(title: str, docPath: str, fileType: str):

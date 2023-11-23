@@ -36,7 +36,6 @@ class DBQuery(QtSql.QSqlQuery):
         self.exec()
 
     def addTareAndCalculateNetto(self, weightData, grossWeight, nopol):
-        # TODO: not checked
         netto = float(grossWeight) - float(weightData)
         
         self.prepare(

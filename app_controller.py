@@ -90,7 +90,6 @@ class AppController:
         weightData = ''
         rfidData = ''
 
-        # NOTE: kondisional buat apa ya? 
         if type(dataSplit) is list:
             weightData = dataSplit[0]
             try:

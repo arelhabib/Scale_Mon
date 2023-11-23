@@ -1,4 +1,6 @@
 from PyQt5 import QtGui, QtWidgets
+from utils.resource_path import ResourcePath
+from widgets.image import Image
 
 from widgets.label_data import LabelData
 from widgets.table_view import TableView
@@ -14,7 +16,8 @@ class ViewMainWindow(QtWidgets.QWidget):
         self.mainTable = TableView()
         self.mainTable.verticalHeader().setVisible(False)
 
-        logo = QtWidgets.QLabel('placeholder img')
+        logoImg = ResourcePath().fileName('logo.png')
+        logo = Image(logoImg)
         
         # Layout
         main = QtWidgets.QHBoxLayout()

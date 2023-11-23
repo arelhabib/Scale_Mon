@@ -19,13 +19,9 @@ class WorkerController:
         self.__dataModel = DataModel()
         self.__query = dbCon
         self.__signalManager = signal
-        # self.__windowController = windowController
 
         self.__autoTimer = QtCore.QTimer()
         self.__autoTimer.timeout.connect(self.__rfidScan)
-        # self.otherTimer = QtCore.QTimer()
-        # self.otherTimer.start(500)
-        # self.otherTimer.timeout.connect(self.checkAutoTimer)
         
         self.__monitorMode = None
         self.__NopolID = None
@@ -88,8 +84,6 @@ class WorkerController:
 
     def __rfidScan(self):
         """isi data otomatis berdasarkan data RFID yang didapat"""
-
-        # TODO: test the thing
         rfid = self.__dataModel.rfid
         nopolResult = self.__query.findNopolbyRFID(rfid)
 
@@ -113,23 +107,15 @@ class WorkerController:
             if not nopolResult and rfid:
                 self.__stopAutoTimer()
 
-                if rfid != 0:
-                    # NOTE: why do i need to use rfidPassCheck?
-                    rfidPassCheck = rfid
-                    nopol, dialogNopol = inputDialog("Nopol Truk", "Masukkan plat nomor truk dibawah")
-                    nama, dialogNama = inputDialog("Nama Supir", "Masukkan nama supir dibawah")
-                    if rfidPassCheck != 0:
-                        if dialogNopol and dialogNama:
-                            self.__query.adminRegisTruck(rfidPassCheck, nama, nopol)
-                            
-                            print('basically success')
-                            self.__startAutoTimer()
-                        else:
-                            print('you came here')
-                            self.__startAutoTimer()
-
-        # else:
-        #     print('reset')
-        #     self.__NopolID = None
+                rfidPassCheck = rfid
+                nopol, dialogNopol = inputDialog("Nopol Truk", "Masukkan plat nomor truk dibawah")
+                nama, dialogNama = inputDialog("Nama Supir", "Masukkan nama supir dibawah")
+                if rfidPassCheck:
+                    if dialogNopol and dialogNama:
+                        self.__query.adminRegisTruck(rfidPassCheck, nama, nopol)
+                        
+                        self.__startAutoTimer()
+                    else:
+                        self.__startAutoTimer()
 
        
